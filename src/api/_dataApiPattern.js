@@ -51,15 +51,73 @@ export const dataApiPattern = (app) => {
             res.status(500).json({ error: "Ошибка сервера" });
         }
     });
+
     //* post-запрос
     app.post('/api/data/note', (req, res) => {
-        console.log('зашёл');
+        console.log('записываю');
         let description = req.body.description;
         console.log(req.body.description);
         const result = pool.query('INSERT INTO notes (description) VALUES($1) RETURNING *', [description]);
         console.log('отработал');
         return res.json(result)
     });
+//* создание новой заметки
+    app.post('/api/data/createnote', async (req, res) => {
+        console.log('создаю');
+        let nameNote = req.body.name;
+        console.log(req.body.name);
+
+        try {
+            console.log('создаю notes');
+            const queryNotes = `CREATE TABLE IF NOT EXISTS notes (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR,
+                description VARCHAR
+            )`;
+            await pool.query(queryNotes); 
+            console.log('создал notes');  
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Ошибка при создании таблицы notes', details: error.message });
+        }
+        console.log('создаю заметку');
+        const result = pool.query('INSERT INTO notes (name, description) VALUES($1,$2) RETURNING *', [nameNote, "text is none"]);
+        res.status(200).json({ message: `Заметка ${nameNote} успешно создана!` });
+        console.log('создал');
+        return res.json(result)
+    });
+//* получение списка заметок
+    app.get('/api/data/getlistnotes', async(req, res) => {
+        try {
+            console.log("получаю список");
+            const result = await pool.query('SELECT * from notes');
+            console.log("result", result);
+
+            const indef = result.rows;
+
+            console.log("indef", indef);
+            
+            res.json(indef);
+            res.status(200).json({ message: `Список заметок - получен` });
+
+        } catch (error) {
+            console.error("Ошибка:", error);
+            res.status(500).json({ error: "Ошибка сервера" });
+        }
+    });
+
+    app.patch('/api/data/changeNote/:id', (req, res) => {
+        try {
+            const idDataReq = req.params.id;
+            const newInfo = req.body;
+            let result = pool.query('UPDATE notes SET description=$1 WHERE id=$2 RETURNING *', [req.body.description, idDataReq])
+            res.json(result);
+            res.status(200).json({ message: `заметка перезаписана!` });
+        } catch (error) {
+            console.error("Ошибка:", error);
+            res.status(500).json({ error: "Ошибка сервера при перезаписи" });
+        }
+    })
     // * put-запрос
     // app.put('/api/data/:id', (req, res) => {
     // console.log('change data for id: ' + req.params.id);
